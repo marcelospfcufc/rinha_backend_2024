@@ -1,0 +1,8 @@
+POST http://localhost:3000/clientes/1/transacoes HTTP/1.1
+content-type: application/json
+
+{
+    "valor": 15000,
+    "tipo": "d",
+    "descricao": "saindo"
+}
