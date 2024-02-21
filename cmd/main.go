@@ -12,8 +12,11 @@ import (
 
 func main() {
 
-	dbConnection := "rinha:qpalzm@tcp(localhost:3306)/rinha_db?charset=utf8mb4&parseTime=True&loc=Local"
-	db, err := gorm.Open(mysql.Open(dbConnection), &gorm.Config{})
+	dsn := "rinha:qpalzm@tcp(localhost:3306)/rinha_db?charset=utf8mb4&parseTime=True&loc=UTC"
+	db, err := gorm.Open(mysql.New(mysql.Config{
+		DSN:               dsn,
+		DefaultStringSize: 256,
+	}), &gorm.Config{})
 
 	if err != nil {
 		fmt.Println(err.Error())
