@@ -58,4 +58,37 @@ func (transactionRoute *TransactionRoute) AddRoutes() {
 
 		return c.Status(fiber.StatusOK).JSON(outputController)
 	})
+
+	transactionRoute.app.Get("/clientes/:id/extrato", func(c *fiber.Ctx) error {
+
+		transactionRepository := database.NewTransactionRepositoryGorm(transactionRoute.db)
+		clientRepository := database.NewClientRepositoryGorm(transactionRoute.db)
+
+		getTransactionStatementService := service.NewGetTransactionStatementService(
+			clientRepository,
+			transactionRepository,
+		)
+		ctrl := controller.NewGetBankStatementController(*getTransactionStatementService)
+
+		id, _ := strconv.Atoi(c.Params("id"))
+		var body controller.AddTransactionInputDto
+		c.BodyParser(&body)
+
+		outputController, err := ctrl.GetBankStatement(controller.GetBankStatementInputDto{
+			ClientId: entity.Id(id),
+		})
+
+		if err != nil {
+
+			if err == domain.ErrClientNotFound {
+				return c.SendStatus(fiber.StatusNotFound)
+			} else if err == domain.ErrClientWithoutBalance {
+				return c.SendStatus(fiber.StatusUnprocessableEntity)
+			} else {
+				return c.SendStatus(fiber.StatusInternalServerError)
+			}
+		}
+
+		return c.Status(fiber.StatusOK).JSON(outputController)
+	})
 }
