@@ -14,6 +14,17 @@ func NewClientRepositoryGorm(dbConnection *gorm.DB) *ClientRepositoryGorm {
 	return &ClientRepositoryGorm{dbConnection: dbConnection}
 }
 
+func (repo *ClientRepositoryGorm) HasClientById(clientId entity.Id) bool {
+	var clientFound Client
+	result := repo.dbConnection.First(&clientFound, clientId)
+
+	if result.Error == nil && result.RowsAffected > 0 {
+		return true
+	}
+
+	return false
+}
+
 func (repo *ClientRepositoryGorm) Create(client entity.Client) (entity.Client, error) {
 	clientModel := Client{
 		Name:   client.Name,
