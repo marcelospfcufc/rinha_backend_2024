@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"time"
 
 	"github.com/marcelospfcufc/rinha_backend_2024/internal/domain"
@@ -40,13 +41,22 @@ func NewAddTransactionService(
 func (service *AddTransactionService) Execute(inputData InputData) (output OutputData, err error) {
 
 	var clientFound entity.Client
-	clientFound, err = service.clientRepository.GetById(inputData.ClientId)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*40)
+	defer cancel()
+
+	clientFound, err = service.clientRepository.GetById(ctx, inputData.ClientId)
 
 	if err != nil {
 		return
 	}
 
-	balanceBeforeOperation := clientFound.Balance()
+	clientBalance, err := service.transactionRepository.CalculateBalanceByClient(ctx, inputData.ClientId)
+	if err != nil {
+		return
+	}
+
+	balanceBeforeOperation := clientBalance
 	var balanceAfterOperation int64 = 0
 
 	if inputData.Operation == "d" {
@@ -63,6 +73,7 @@ func (service *AddTransactionService) Execute(inputData InputData) (output Outpu
 	utcTime := time.Now().UTC()
 
 	_, err = service.transactionRepository.Create(
+		ctx,
 		inputData.ClientId,
 		entity.Transaction{
 			Value:       inputData.Value,

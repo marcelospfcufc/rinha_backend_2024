@@ -1,9 +1,14 @@
 package repository
 
-import "github.com/marcelospfcufc/rinha_backend_2024/internal/domain/entity"
+import (
+	"context"
+
+	"github.com/marcelospfcufc/rinha_backend_2024/internal/domain/entity"
+)
 
 type ClientRepository interface {
-	HasClientById(clientId entity.Id) bool
+	HasClientById(ctx context.Context, clientId entity.Id) bool
 	Create(client entity.Client) (entity.Client, error)
-	GetById(clientId entity.Id) (entity.Client, error)
+	GetById(ctx context.Context, clientId entity.Id) (entity.Client, error)
+	GetTransactionsById(ctx context.Context, clientId entity.Id) ([]entity.Transaction, error)
 }

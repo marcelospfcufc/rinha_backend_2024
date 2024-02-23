@@ -1,13 +1,14 @@
 package rest
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/marcelospfcufc/rinha_backend_2024/internal/controller"
 	"github.com/marcelospfcufc/rinha_backend_2024/internal/domain"
 	"github.com/marcelospfcufc/rinha_backend_2024/internal/domain/entity"
-	database "github.com/marcelospfcufc/rinha_backend_2024/internal/infra/database/gorm"
+	"github.com/marcelospfcufc/rinha_backend_2024/internal/infra/database"
 	"github.com/marcelospfcufc/rinha_backend_2024/internal/service"
 	"gorm.io/gorm"
 )
@@ -24,12 +25,10 @@ func NewTransactionRoute(app *fiber.App, db *gorm.DB) *TransactionRoute {
 	}
 }
 
-func (transactionRoute *TransactionRoute) AddRoutes() {
-
-	transactionRoute.app.Post("/clientes/:id/transacoes", func(c *fiber.Ctx) error {
-
-		transactionRepository := database.NewTransactionRepositoryGorm(transactionRoute.db)
-		clientRepository := database.NewClientRepositoryGorm(transactionRoute.db)
+func PostWrapper(db *gorm.DB) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		transactionRepository := database.NewTransactionRepositoryGorm(db)
+		clientRepository := database.NewClientRepositoryGorm(db)
 		addTransactionService := service.NewAddTransactionService(
 			clientRepository,
 			transactionRepository,
@@ -40,7 +39,20 @@ func (transactionRoute *TransactionRoute) AddRoutes() {
 		var body controller.AddTransactionInputDto
 		c.BodyParser(&body)
 
-		outputController, err := ctrl.AddTransaction(controller.AddTransactionInputData{
+		if body.Operation != "c" && body.Operation != "d" {
+			fmt.Println("Invalid Operation:", body.Operation)
+			return c.SendStatus(fiber.StatusBadRequest)
+		}
+
+		if len(body.Description) < 1 || len(body.Description) > 10 {
+			fmt.Println("Invalid Description:", body.Description)
+			return c.SendStatus(fiber.StatusBadRequest)
+		}
+
+		var outputController controller.AddTransactionOutputDto
+		var err error
+
+		outputController, err = ctrl.AddTransaction(controller.AddTransactionInputData{
 			AddTransactionInputDto: body,
 			ClientId:               entity.Id(id),
 		})
@@ -57,17 +69,20 @@ func (transactionRoute *TransactionRoute) AddRoutes() {
 		}
 
 		return c.Status(fiber.StatusOK).JSON(outputController)
-	})
+	}
+}
 
-	transactionRoute.app.Get("/clientes/:id/extrato", func(c *fiber.Ctx) error {
+func GetWrapper(db *gorm.DB) fiber.Handler {
+	return func(c *fiber.Ctx) error {
 
-		transactionRepository := database.NewTransactionRepositoryGorm(transactionRoute.db)
-		clientRepository := database.NewClientRepositoryGorm(transactionRoute.db)
+		transactionRepository := database.NewTransactionRepositoryGorm(db)
+		clientRepository := database.NewClientRepositoryGorm(db)
 
 		getTransactionStatementService := service.NewGetTransactionStatementService(
 			clientRepository,
 			transactionRepository,
 		)
+
 		ctrl := controller.NewGetBankStatementController(*getTransactionStatementService)
 
 		id, _ := strconv.Atoi(c.Params("id"))
@@ -90,5 +105,5 @@ func (transactionRoute *TransactionRoute) AddRoutes() {
 		}
 
 		return c.Status(fiber.StatusOK).JSON(outputController)
-	})
+	}
 }

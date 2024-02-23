@@ -1,29 +1,31 @@
 version: "3.8"
 
 services:
-  #api01: &api
+  api01: &api
     # Lembre-se de que seu serviço HTTP deve estar hospedado num repositório
     # publicamente acessível! Ex.: hub.docker.com
-  #  image: marcelospfcufc/rinha_backend:latest
-  #  hostname: api01
-  #  environment:
-  #    - DB_HOSTNAME=db
-    
+    image: marcelospfcufc/rinha-backend-2024:v1
+    hostname: api01
+    environment:
+      - DB_URI=postgres://postgres:postgres@db:5432/rinha_db?sslmode=disable
+    restart: always
+    tty: true
+    #command: ["/api/main"]    
     # Não é necessário expor qualquer porta além da porta do load balancer,
     # mas é comum as pessoas o fazerem para testarem suas APIs e conectarem
     # ao banco de dados na fase de desenvolvimento.
-  #  ports:
-  #    - "8081:8080"
-  #  depends_on:
-  #    - db
-  #  deploy:
-  #    resources:
-  #      limits:
-  #        cpus: "0.6"
-  #        memory: "200MB"
+    ports:
+      - "8081:8080"
+    depends_on:
+      - db_mysql
+    deploy:
+      resources:
+        limits:
+          cpus: "0.6"
+          memory: "200MB"
 
   #api02:
-    # Essa sintaxe reusa o que foi declarado em 'api01'.
+  #  # Essa sintaxe reusa o que foi declarado em 'api01'.
   #  <<: *api 
   #  hostname: api02
   #  environment:
@@ -39,13 +41,29 @@ services:
   #    - api01
   #    - api02
   #  ports:
-        # Obrigatório expor/usar a porta 9999 no load balancer!
+  #     # Obrigatório expor/usar a porta 9999 no load balancer!
   #    - "9999:9999" 
   #  deploy:
   #    resources:
   #      limits:
   #        cpus: "0.17"
   #        memory: "10MB"
+
+  db_postgres:
+    image: postgres:12-alpine
+    hostname: db
+    environment:
+      - POSTGRES_DB=rinha_db
+      - POSTGRES_PASSWORD=qpalzm
+    ports:
+      - "55432:5432"
+    #volumes:
+    #  - ./initdb.d:/docker-entrypoint-initdb.d
+    deploy:
+      resources:
+        limits:
+          cpus: "0.4"
+          memory: "250MB"
 
   db_mysql:
     image: mysql:8.0.36-debian
@@ -69,29 +87,8 @@ services:
           # aqui declarados é de 1.5 unidades de CPU e 550MB
           # de memória. A distribuição feita aqui é apenas
           # um exemplo – distribua como quiser.
-          cpus: "0.30"
-          memory: "400MB"
-
-  #db:
-  #  image: postgres:latest
-  #  hostname: db
-  #  environment:
-  #    - POSTGRES_PASSWORD=123
-  #    - POSTGRES_USER=admin
-  #    - POSTGRES_DB=rinha
-  #  ports:
-  #    - "5432:5432"
-  #  volumes:
-  #    - ./script.sql:/docker-entrypoint-initdb.d/script.sql
-  #  deploy:
-  #    resources:
-  #      limits:
-          # Note que a soma de todos os limites dos serviços
-          # aqui declarados é de 1.5 unidades de CPU e 550MB
-          # de memória. A distribuição feita aqui é apenas
-          # um exemplo – distribua como quiser.
-  #        cpus: "0.13"
-  #        memory: "140MB"
+          cpus: "0.4"
+          memory: "250MB"  
 
 # O uso do modo `bridge` deve ser adequado à carga que será usada no teste.
 # A edição anterior se beneficiou do modo host pois o volume de requisições

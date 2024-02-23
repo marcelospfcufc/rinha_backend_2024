@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"time"
 
 	"github.com/marcelospfcufc/rinha_backend_2024/internal/domain"
@@ -46,14 +47,22 @@ func (service *GetTransactionStatementService) Execute(
 	inputData GetTransactionStatementInputData,
 ) (output GetTransactionStatementOutputData, err error) {
 
+	context, cancel := context.WithTimeout(context.Background(), time.Second*40)
+	defer cancel()
+
 	var outputData GetTransactionStatementOutputData
-	hasClient := service.clientRepository.HasClientById(inputData.ClientId)
+	hasClient := service.clientRepository.HasClientById(context, inputData.ClientId)
 
 	if !hasClient {
 		return outputData, domain.ErrClientNotFound
 	}
 
-	transactions, err := service.transactionRepository.GetAllByUser(inputData.ClientId, 10, repository.Desc)
+	transactions, err := service.transactionRepository.GetAllByUser(
+		context,
+		inputData.ClientId,
+		10,
+		repository.Desc,
+	)
 
 	if err != nil {
 		return outputData, err
@@ -70,7 +79,10 @@ func (service *GetTransactionStatementService) Execute(
 		}
 	}
 
-	summaryBalance, err := service.transactionRepository.SummaryBalanceByClient(inputData.ClientId)
+	summaryBalance, err := service.transactionRepository.SummaryBalanceByClient(
+		context,
+		inputData.ClientId,
+	)
 	if err != nil {
 		return outputData, err
 	}
