@@ -33,7 +33,10 @@ func NewAddTransactionController(service service.AddTransactionService) *AddTran
 	return &controller
 }
 
-func (controller *AddTransactionController) AddTransaction(input AddTransactionInputData) (AddTransactionOutputDto, error) {
+func (controller *AddTransactionController) AddTransaction(
+	input AddTransactionInputData,
+) (AddTransactionOutputDto, error) {
+
 	out, err := controller.addTransactionService.Execute(
 		service.InputData{
 			ClientId:    input.ClientId,

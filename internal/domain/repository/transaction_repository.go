@@ -11,8 +11,14 @@ type SummaryBalanceRepositoryData struct {
 	Credit  int64
 }
 
+type CreateTransactionOutputData struct {
+	Transaction    entity.Transaction
+	ClientCredit   int64
+	CurrentBalance int64
+}
+
 type TransactionRepository interface {
-	Create(ctx context.Context, clientId entity.Id, transaction entity.Transaction) (entity.Transaction, error)
+	Create(ctx context.Context, clientId entity.Id, transaction entity.Transaction) (CreateTransactionOutputData, error)
 	GetAllByUser(ctx context.Context, clientId entity.Id, limit int, orderBy OrderBy) ([]entity.Transaction, error)
 	SummaryBalanceByClient(ctx context.Context, clientId entity.Id) (SummaryBalanceRepositoryData, error)
 	CalculateBalanceByClient(ctx context.Context, clientId entity.Id) (int64, error)

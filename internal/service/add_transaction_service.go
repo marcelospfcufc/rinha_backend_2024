@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/marcelospfcufc/rinha_backend_2024/internal/domain"
 	"github.com/marcelospfcufc/rinha_backend_2024/internal/domain/entity"
 	"github.com/marcelospfcufc/rinha_backend_2024/internal/domain/repository"
 )
@@ -40,39 +39,43 @@ func NewAddTransactionService(
 
 func (service *AddTransactionService) Execute(inputData InputData) (output OutputData, err error) {
 
-	var clientFound entity.Client
+	/*
+		var clientFound entity.Client
+		clientFound, err = service.clientRepository.GetById(ctx, inputData.ClientId)
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*40)
-	defer cancel()
+		if err != nil {
+			return
+		}
 
-	clientFound, err = service.clientRepository.GetById(ctx, inputData.ClientId)
+		clientBalance, err := service.transactionRepository.CalculateBalanceByClient(ctx, inputData.ClientId)
+		if err != nil {
+			return
+		}
 
-	if err != nil {
-		return
-	}
+		balanceBeforeOperation := clientBalance
+		var balanceAfterOperation int64 = 0
 
-	clientBalance, err := service.transactionRepository.CalculateBalanceByClient(ctx, inputData.ClientId)
-	if err != nil {
-		return
-	}
+		value := inputData.Value
 
-	balanceBeforeOperation := clientBalance
-	var balanceAfterOperation int64 = 0
+		if inputData.Operation == "d" {
+			value = value * -1
+		}
 
-	if inputData.Operation == "d" {
-		balanceAfterOperation = balanceBeforeOperation - inputData.Value
+		balanceAfterOperation = balanceBeforeOperation + value
 
 		if balanceAfterOperation+clientFound.Credit < 0 {
 			err = domain.ErrClientWithoutBalance
 			return
 		}
-	} else {
-		balanceAfterOperation = balanceBeforeOperation + inputData.Value
-	}
+	*/
+
+	ctx := context.Background()
 
 	utcTime := time.Now().UTC()
 
-	_, err = service.transactionRepository.Create(
+	var repoOutput repository.CreateTransactionOutputData
+
+	repoOutput, err = service.transactionRepository.Create(
 		ctx,
 		inputData.ClientId,
 		entity.Transaction{
@@ -88,7 +91,7 @@ func (service *AddTransactionService) Execute(inputData InputData) (output Outpu
 	}
 
 	return OutputData{
-		Credit:  clientFound.Credit,
-		Balance: balanceAfterOperation,
+		Credit:  repoOutput.ClientCredit,
+		Balance: repoOutput.CurrentBalance,
 	}, nil
 }

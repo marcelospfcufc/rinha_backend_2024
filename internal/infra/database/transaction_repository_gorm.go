@@ -17,7 +17,7 @@ func NewTransactionRepositoryGorm(dbConnection *gorm.DB) *TransactionRepositoryG
 	return &TransactionRepositoryGorm{dbConnection: dbConnection}
 }
 
-func (repo *TransactionRepositoryGorm) Create(ctx context.Context, clientId entity.Id, transaction entity.Transaction) (entity.Transaction, error) {
+func (repo *TransactionRepositoryGorm) Create(ctx context.Context, clientId entity.Id, transaction entity.Transaction) (repository.CreateTransactionOutputData, error) {
 	transactionModel := Transaction{
 		Operation:   transaction.Operation,
 		Value:       transaction.Value,
@@ -25,24 +25,55 @@ func (repo *TransactionRepositoryGorm) Create(ctx context.Context, clientId enti
 		CreatedAt:   transaction.CreatedAt,
 		ClientID:    clientId,
 	}
+	var clientFound Client
+	createTransactionOutput := repository.CreateTransactionOutputData{}
 
-	tx := repo.dbConnection.Begin()
+	//Start Transaction
+	//tx := repo.dbConnection.WithContext(ctx).Begin()
 
-	result := tx.WithContext(ctx).Create(&transactionModel)
+	result := repo.dbConnection.WithContext(ctx).First(&clientFound, clientId)
 	if result.Error != nil {
-		tx.Rollback()
-		return entity.Transaction{}, result.Error
+		return createTransactionOutput, domain.ErrClientNotFound
 	}
 
-	tx.Commit()
+	value := transaction.Value
+	if transaction.Operation == "d" {
+		value *= -1
+	}
 
-	return entity.Transaction{
+	if clientFound.CurrentBalance+clientFound.Credit+value < 0 {
+		return createTransactionOutput, domain.ErrClientWithoutBalance
+	}
+
+	clientFound.CurrentBalance = clientFound.CurrentBalance + value
+	result = repo.dbConnection.WithContext(ctx).Save(clientFound)
+	if result.Error != nil {
+		//repo.dbConnection.Rollback()
+		return createTransactionOutput, result.Error
+	}
+
+	result = repo.dbConnection.WithContext(ctx).Create(&transactionModel)
+	if result.Error != nil {
+		//tx.Rollback()
+		return createTransactionOutput, result.Error
+	}
+
+	/* if err := tx.WithContext(ctx).Commit().Error; err != nil {
+		log.Fatal(err)
+	} */
+
+	createTransactionOutput.Transaction = entity.Transaction{
 		Id:          transactionModel.ID,
 		Value:       transaction.Value,
 		Operation:   transaction.Operation,
 		Description: transaction.Description,
 		CreatedAt:   transaction.CreatedAt,
-	}, result.Error
+	}
+
+	createTransactionOutput.ClientCredit = clientFound.Credit
+	createTransactionOutput.CurrentBalance = clientFound.CurrentBalance
+
+	return createTransactionOutput, result.Error
 }
 
 func (repo *TransactionRepositoryGorm) GetAllByUser(
@@ -106,11 +137,19 @@ func (repo *TransactionRepositoryGorm) SummaryBalanceByClient(ctx context.Contex
 
 func (repo *TransactionRepositoryGorm) CalculateBalanceByClient(ctx context.Context, clientId entity.Id) (int64, error) {
 
-	var clientBalance int64
-	result := repo.dbConnection.WithContext(ctx).Raw("SELECT COALESCE(SUM(CASE WHEN operation = 'c' THEN value ELSE -value END),0) FROM transactions WHERE client_id =?", clientId).Scan(&clientBalance)
+	/*
+		var clientBalance int64
+		result := repo.dbConnection.WithContext(ctx).Raw("SELECT COALESCE(SUM(CASE WHEN operation = 'c' THEN value ELSE -value END),0) FROM transactions WHERE client_id =?", clientId).Scan(&clientBalance)
+		if result.Error != nil {
+			return clientBalance, result.Error
+		}
+	*/
+	var clientFound Client
+	result := repo.dbConnection.WithContext(ctx).First(&clientFound, clientId)
+
 	if result.Error != nil {
-		return clientBalance, result.Error
+		return -1, nil
 	}
 
-	return clientBalance, nil
+	return clientFound.CurrentBalance, nil
 }

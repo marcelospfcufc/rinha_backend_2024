@@ -17,7 +17,7 @@ services:
     ports:
       - "8081:8080"
     depends_on:
-      - db_mysql
+      - db_postgres
     deploy:
       resources:
         limits:
@@ -50,15 +50,16 @@ services:
   #        memory: "10MB"
 
   db_postgres:
-    image: postgres:12-alpine
-    hostname: db
+    image: postgres:latest
+    hostname: db_postgres    
     environment:
-      - POSTGRES_DB=rinha_db
+      - POSTGRES_DB=rinha_db            
       - POSTGRES_PASSWORD=qpalzm
     ports:
       - "55432:5432"
-    #volumes:
-    #  - ./initdb.d:/docker-entrypoint-initdb.d
+    volumes:
+    - ./configurations/postgresql.conf:/docker-entrypoint-initdb.d/postgresql.conf
+    command: postgres -c config_file=/docker-entrypoint-initdb.d/postgresql.conf
     deploy:
       resources:
         limits:
@@ -87,8 +88,8 @@ services:
           # aqui declarados é de 1.5 unidades de CPU e 550MB
           # de memória. A distribuição feita aqui é apenas
           # um exemplo – distribua como quiser.
-          cpus: "0.4"
-          memory: "250MB"  
+          cpus: "1"
+          memory: "440MB"  
 
 # O uso do modo `bridge` deve ser adequado à carga que será usada no teste.
 # A edição anterior se beneficiou do modo host pois o volume de requisições

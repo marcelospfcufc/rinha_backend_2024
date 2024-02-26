@@ -7,11 +7,12 @@ import (
 )
 
 type Client struct {
-	ID           entity.Id `gorm:"primaryKey"`
-	CreatedAt    time.Time
-	Name         string
-	Credit       int64
-	Transactions []Transaction `gorm:"foreignkey:ClientID"`
+	ID             entity.Id `gorm:"primaryKey"`
+	CreatedAt      time.Time
+	Name           string
+	Credit         int64
+	Transactions   []Transaction `gorm:"foreignkey:ClientID"`
+	CurrentBalance int64
 }
 
 type Transaction struct {

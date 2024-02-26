@@ -2,9 +2,9 @@ POST http://localhost:8081/clientes/1/transacoes HTTP/1.1
 content-type: application/json
 
 {
-    "valor": 200000,
+    "valor": 1000,
     "tipo": "d",
-    "descricao": "saindo"
+    "descricao": "descricão"
 }
 
 GET http://localhost:8081/clientes/1/extrato HTTP/1.1

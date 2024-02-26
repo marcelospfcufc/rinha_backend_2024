@@ -29,8 +29,9 @@ func (repo *ClientRepositoryGorm) HasClientById(ctx context.Context, clientId en
 
 func (repo *ClientRepositoryGorm) Create(client entity.Client) (entity.Client, error) {
 	clientModel := Client{
-		Name:   client.Name,
-		Credit: client.Credit,
+		Name:           client.Name,
+		Credit:         client.Credit,
+		CurrentBalance: client.CurrentBalance,
 	}
 
 	result := repo.dbConnection.Create(&clientModel)
@@ -40,9 +41,10 @@ func (repo *ClientRepositoryGorm) Create(client entity.Client) (entity.Client, e
 	}
 
 	return entity.Client{
-		Id:     clientModel.ID,
-		Name:   clientModel.Name,
-		Credit: clientModel.Credit,
+		Id:             clientModel.ID,
+		Name:           clientModel.Name,
+		Credit:         clientModel.Credit,
+		CurrentBalance: clientModel.CurrentBalance,
 	}, result.Error
 }
 
