@@ -5,21 +5,21 @@ import (
 )
 
 func CreateDatabase(db *sql.DB) error {
-	_, err := db.Query(
+	rows, err := db.Query(
 		`
 		DROP TABLE IF EXISTS Transactions;
 		
 		DROP TABLE IF EXISTS Clients;    
 
 		CREATE TABLE Clients (
-			id INT PRIMARY KEY,
+			id BIGSERIAL PRIMARY KEY,
 			name VARCHAR(255),
 			credit INTEGER,
 			balance INTEGER DEFAULT 0
 		);
 
 		CREATE TABLE Transactions (
-			id INT PRIMARY KEY,
+			id BIGSERIAL PRIMARY KEY,
 			value INTEGER,
 			description VARCHAR(10),
 			operation CHAR(1),
@@ -41,6 +41,8 @@ func CreateDatabase(db *sql.DB) error {
 	if err != nil {
 		return err
 	}
+
+	defer rows.Close()
 
 	return nil
 }

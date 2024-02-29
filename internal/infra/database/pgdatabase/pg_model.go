@@ -1,7 +1,5 @@
 package pgdatabase
 
-import "time"
-
 type ClientModel struct {
 	Id      uint
 	Name    string
@@ -14,6 +12,6 @@ type TransactionModel struct {
 	Value       int64
 	Description string
 	Operation   string
+	CreatedAt   int64
 	Client_Id   uint
-	CreatedAt   time.Time
 }

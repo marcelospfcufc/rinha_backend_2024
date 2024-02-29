@@ -1,7 +1,10 @@
 package controller
 
 import (
+	"context"
+
 	"github.com/marcelospfcufc/rinha_backend_2024/internal/domain/entity"
+	"github.com/marcelospfcufc/rinha_backend_2024/internal/domain/interfaces"
 	"github.com/marcelospfcufc/rinha_backend_2024/internal/service"
 )
 
@@ -22,22 +25,28 @@ type AddTransactionOutputDto struct {
 }
 
 type AddTransactionController struct {
-	addTransactionService service.AddTransactionService
+	UnitOfWork            interfaces.UnitOfWork
+	AddTransactionService *service.AddTransactionService
 }
 
-func NewAddTransactionController(service service.AddTransactionService) *AddTransactionController {
-	controller := AddTransactionController{
-		addTransactionService: service,
+func NewAddTransactionController(
+	unitOfWork interfaces.UnitOfWork,
+	addTransactionService *service.AddTransactionService,
+) *AddTransactionController {
+
+	return &AddTransactionController{
+		UnitOfWork:            unitOfWork,
+		AddTransactionService: addTransactionService,
 	}
-
-	return &controller
 }
 
-func (controller *AddTransactionController) AddTransaction(
+func (ctrl *AddTransactionController) AddTransaction(
+	ctx context.Context,
 	input AddTransactionInputData,
 ) (AddTransactionOutputDto, error) {
 
-	out, err := controller.addTransactionService.Execute(
+	out, err := ctrl.AddTransactionService.Execute(
+		ctx,
 		service.InputData{
 			ClientId:    input.ClientId,
 			Value:       input.Value,

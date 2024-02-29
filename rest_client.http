@@ -2,7 +2,7 @@ POST http://localhost:8081/clientes/1/transacoes HTTP/1.1
 content-type: application/json
 
 {
-    "valor": 1000,
+    "valor": 12,
     "tipo": "d",
     "descricao": "descricão"
 }

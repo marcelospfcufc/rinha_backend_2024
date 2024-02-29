@@ -2,8 +2,8 @@ package service
 
 import (
 	"context"
-	"time"
 
+	"github.com/marcelospfcufc/rinha_backend_2024/internal/domain"
 	"github.com/marcelospfcufc/rinha_backend_2024/internal/domain/entity"
 	"github.com/marcelospfcufc/rinha_backend_2024/internal/domain/repository"
 )
@@ -21,77 +21,64 @@ type OutputData struct {
 }
 
 type AddTransactionService struct {
-	clientRepository      repository.ClientRepository
-	transactionRepository repository.TransactionRepository
+	repo repository.Repository
 }
 
 func NewAddTransactionService(
-	clientRepository repository.ClientRepository,
-	transactionRepository repository.TransactionRepository,
+	repo *repository.Repository,
 ) *AddTransactionService {
 	service := AddTransactionService{
-		clientRepository:      clientRepository,
-		transactionRepository: transactionRepository,
+		repo: *repo,
 	}
 
 	return &service
 }
 
-func (service *AddTransactionService) Execute(inputData InputData) (output OutputData, err error) {
+func (service *AddTransactionService) Execute(ctx context.Context, inputData InputData) (output OutputData, err error) {
+	var newBalanceValue int64
 
-	/*
-		var clientFound entity.Client
-		clientFound, err = service.clientRepository.GetById(ctx, inputData.ClientId)
+	domainClient, err := service.repo.GetSimplifiedClientById(ctx, inputData.ClientId)
+	if err != nil {
+		return OutputData{}, domain.ErrClientNotFound
+	}
 
-		if err != nil {
-			return
+	newBalanceValue = domainClient.CurrentBalance
+	if inputData.Operation == "d" {
+		newBalanceValue -= inputData.Value
+
+		if newBalanceValue < domainClient.Credit*-1 {
+			return OutputData{}, domain.ErrClientWithoutBalance
 		}
+	} else {
+		newBalanceValue += inputData.Value
+	}
 
-		clientBalance, err := service.transactionRepository.CalculateBalanceByClient(ctx, inputData.ClientId)
-		if err != nil {
-			return
-		}
+	err = service.repo.UpdateClientBalance(
+		ctx,
+		inputData.ClientId,
+		newBalanceValue,
+	)
 
-		balanceBeforeOperation := clientBalance
-		var balanceAfterOperation int64 = 0
+	if err != nil {
+		return OutputData{}, err
+	}
 
-		value := inputData.Value
-
-		if inputData.Operation == "d" {
-			value = value * -1
-		}
-
-		balanceAfterOperation = balanceBeforeOperation + value
-
-		if balanceAfterOperation+clientFound.Credit < 0 {
-			err = domain.ErrClientWithoutBalance
-			return
-		}
-	*/
-
-	ctx := context.Background()
-
-	utcTime := time.Now().UTC()
-
-	var repoOutput repository.CreateTransactionOutputData
-
-	repoOutput, err = service.transactionRepository.Create(
+	err = service.repo.AddTransaction(
 		ctx,
 		inputData.ClientId,
 		entity.Transaction{
 			Value:       inputData.Value,
 			Operation:   inputData.Operation,
 			Description: inputData.Description,
-			CreatedAt:   utcTime,
 		},
 	)
 
 	if err != nil {
-		return
+		return OutputData{}, err
 	}
 
 	return OutputData{
-		Credit:  repoOutput.ClientCredit,
-		Balance: repoOutput.CurrentBalance,
+		Credit:  domainClient.Credit,
+		Balance: newBalanceValue,
 	}, nil
 }

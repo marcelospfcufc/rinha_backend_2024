@@ -27,38 +27,33 @@ type GetTransactionStatementOutputData struct {
 }
 
 type GetTransactionStatementService struct {
-	clientRepository      repository.ClientRepository
-	transactionRepository repository.TransactionRepository
+	repo repository.Repository
 }
 
 func NewGetTransactionStatementService(
-	clientRepository repository.ClientRepository,
-	transactionRepository repository.TransactionRepository,
+	repo *repository.Repository,
 ) *GetTransactionStatementService {
 	service := GetTransactionStatementService{
-		clientRepository:      clientRepository,
-		transactionRepository: transactionRepository,
+		repo: *repo,
 	}
 
 	return &service
 }
 
 func (service *GetTransactionStatementService) Execute(
+	ctx context.Context,
 	inputData GetTransactionStatementInputData,
 ) (output GetTransactionStatementOutputData, err error) {
 
-	context, cancel := context.WithTimeout(context.Background(), time.Second*40)
-	defer cancel()
+	var outputData GetTransactionStatementOutputData = GetTransactionStatementOutputData{}
 
-	var outputData GetTransactionStatementOutputData
-	hasClient := service.clientRepository.HasClientById(context, inputData.ClientId)
-
-	if !hasClient {
+	client, err := service.repo.GetSimplifiedClientById(ctx, inputData.ClientId)
+	if err != nil {
 		return outputData, domain.ErrClientNotFound
 	}
 
-	transactions, err := service.transactionRepository.GetAllByUser(
-		context,
+	transactions, err := service.repo.GetTransactions(
+		ctx,
 		inputData.ClientId,
 		10,
 		repository.Desc,
@@ -79,16 +74,8 @@ func (service *GetTransactionStatementService) Execute(
 		}
 	}
 
-	summaryBalance, err := service.transactionRepository.SummaryBalanceByClient(
-		context,
-		inputData.ClientId,
-	)
-	if err != nil {
-		return outputData, err
-	}
-
-	outputData.Balance = summaryBalance.Balance
-	outputData.Credit = summaryBalance.Credit
+	outputData.Balance = client.CurrentBalance
+	outputData.Credit = client.Credit
 	outputData.Transactions = transactionsToReturn
 
 	return outputData, err

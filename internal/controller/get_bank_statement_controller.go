@@ -1,9 +1,11 @@
 package controller
 
 import (
+	"context"
 	"time"
 
 	"github.com/marcelospfcufc/rinha_backend_2024/internal/domain/entity"
+	"github.com/marcelospfcufc/rinha_backend_2024/internal/domain/interfaces"
 	"github.com/marcelospfcufc/rinha_backend_2024/internal/service"
 )
 
@@ -23,17 +25,28 @@ type TransactionData struct {
 	CreatedAt   string `json:"realizada_em"`
 }
 
+/*
+	"saldo": {
+	    "total": -9098,
+	    "data_extrato": "2024-01-17T02:34:41.217753Z",
+	    "limite": 100000
+	  },
+*/
 type ClientBalanceData struct {
-	Credit      int64  `json:"limite"`
-	Balance     int64  `json:"saldo"`
+	Balance     int64  `json:"total"`
 	RequestDate string `json:"data_extrato"`
+	Credit      int64  `json:"limite"`
 }
 
 type GetBankStatementController struct {
+	UnitOfWork                     interfaces.UnitOfWork
 	getTransactionStatementService service.GetTransactionStatementService
 }
 
-func NewGetBankStatementController(service service.GetTransactionStatementService) *GetBankStatementController {
+func NewGetBankStatementController(
+	unitOfWork interfaces.UnitOfWork,
+	service service.GetTransactionStatementService,
+) *GetBankStatementController {
 	controller := GetBankStatementController{
 		getTransactionStatementService: service,
 	}
@@ -44,7 +57,15 @@ func NewGetBankStatementController(service service.GetTransactionStatementServic
 func (controller *GetBankStatementController) GetBankStatement(input GetBankStatementInputDto) (GetBankStatementOutputDto, error) {
 	var transactionStatementOutputDto GetBankStatementOutputDto
 
+	ctx, cancel := context.WithTimeout(
+		context.Background(),
+		time.Second*40,
+	)
+
+	defer cancel()
+
 	serviceOutput, err := controller.getTransactionStatementService.Execute(
+		ctx,
 		service.GetTransactionStatementInputData{
 			ClientId: input.ClientId,
 		},
@@ -54,7 +75,10 @@ func (controller *GetBankStatementController) GetBankStatement(input GetBankStat
 		return transactionStatementOutputDto, err
 	}
 
-	lastTransactionToReturn := make([]TransactionData, len(serviceOutput.Transactions))
+	lastTransactionToReturn := make(
+		[]TransactionData,
+		len(serviceOutput.Transactions),
+	)
 
 	for idx, transaction := range serviceOutput.Transactions {
 		lastTransactionToReturn[idx] = TransactionData{
