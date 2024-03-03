@@ -3,9 +3,9 @@ package controller
 import (
 	"context"
 
+	"github.com/marcelospfcufc/rinha_backend_2024/internal/domain"
 	"github.com/marcelospfcufc/rinha_backend_2024/internal/domain/entity"
 	"github.com/marcelospfcufc/rinha_backend_2024/internal/domain/interfaces"
-	"github.com/marcelospfcufc/rinha_backend_2024/internal/service"
 )
 
 type AddTransactionInputDto struct {
@@ -25,19 +25,36 @@ type AddTransactionOutputDto struct {
 }
 
 type AddTransactionController struct {
-	UnitOfWork            interfaces.UnitOfWork
-	AddTransactionService *service.AddTransactionService
+	UnitOfWork interfaces.UnitOfWork
 }
 
 func NewAddTransactionController(
 	unitOfWork interfaces.UnitOfWork,
-	addTransactionService *service.AddTransactionService,
 ) *AddTransactionController {
 
 	return &AddTransactionController{
-		UnitOfWork:            unitOfWork,
-		AddTransactionService: addTransactionService,
+		UnitOfWork: unitOfWork,
 	}
+}
+
+func calculateNewBalance(
+	clientCredit int64,
+	currentBalance int64,
+	transactionValue int64,
+	transactionOperation string,
+) (clientNewCurrentBalance int64, err error) {
+	newBalanceValue := currentBalance
+	if transactionOperation == "d" {
+		newBalanceValue -= transactionValue
+
+		if newBalanceValue < clientCredit*-1 {
+			return -1, domain.ErrClientWithoutBalance
+		}
+	} else {
+		newBalanceValue += transactionValue
+	}
+
+	return newBalanceValue, nil
 }
 
 func (ctrl *AddTransactionController) AddTransaction(
@@ -45,22 +62,36 @@ func (ctrl *AddTransactionController) AddTransaction(
 	input AddTransactionInputData,
 ) (AddTransactionOutputDto, error) {
 
-	out, err := ctrl.AddTransactionService.Execute(
+	var err error
+	ctrl.UnitOfWork.Begin(ctx)
+	defer func() {
+
+		if err != nil {
+			err = ctrl.UnitOfWork.RollBack(ctx)
+		}
+	}()
+
+	repository := ctrl.UnitOfWork.GetRepository()
+
+	clientCredit, currentNewBalance, err := repository.AddTransaction(
 		ctx,
-		service.InputData{
-			ClientId:    input.ClientId,
+		input.ClientId,
+		entity.Transaction{
 			Value:       input.Value,
 			Operation:   input.Operation,
 			Description: input.Description,
 		},
+		calculateNewBalance,
 	)
 
 	if err != nil {
 		return AddTransactionOutputDto{}, err
 	}
 
+	ctrl.UnitOfWork.Commit(ctx)
+
 	return AddTransactionOutputDto{
-		Credit:  out.Credit,
-		Balance: out.Balance,
+		Credit:  clientCredit,
+		Balance: currentNewBalance,
 	}, err
 }

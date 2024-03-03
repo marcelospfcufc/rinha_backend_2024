@@ -1,9 +1,9 @@
 package main
 
 import (
-	"database/sql"
-	"strconv"
+	"context"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/lib/pq"
 
 	"github.com/gofiber/fiber/v2"
@@ -17,53 +17,45 @@ type HandlerFunc func(c *fiber.Ctx) error
 func main() {
 
 	connStr := "postgres://postgres:qpalzm@172.24.0.4/rinha_db?sslmode=disable&timezone=UTC"
-	db, err := sql.Open("postgres", connStr)
+	dbPool, err := pgxpool.New(context.Background(), connStr)
 
 	if err != nil {
 		log.Fatal(err.Error())
 		return
 	}
 
-	defer db.Close()
+	defer dbPool.Close()
+	dbPool.Config().MaxConns = 4
 
-	db.SetMaxOpenConns(200) // Define o número máximo de conexões abertas
-	db.SetMaxIdleConns(100)
-
-	err = pgdatabase.CreateDatabase(db)
+	err = pgdatabase.CreateDatabase(context.Background(), dbPool)
 	if err != nil {
+
 		log.Fatal(err)
 	}
 
-	countGet := 0
-	countPost := 0
+	start := make(chan string, 10)
+	finish := make(chan string, 10)
 
-	queuePost := make(chan *fiber.Ctx, 10000)
-	start := make(chan string)
-	finish := make(chan string)
-
-	processCtx := func(ctxs <-chan *fiber.Ctx) {
+	processCtx := func(ctxs <-chan string) {
 		for ctx := range ctxs {
-			log.Info("Processando requisição para o caminho: %s\n", ctx.Path())
-			countPost++
-			start <- strconv.Itoa(countPost)
-			log.Info("Finalizando: ", <-finish)
+			log.Info("Processing: ", ctx)
+			log.Info("Finish: ", <-finish)
 		}
 	}
 
-	go processCtx(queuePost)
+	go processCtx(start)
 
-	queueGet := make(chan *fiber.Ctx, 1)
+	queueGet := make(chan *fiber.Ctx, 20)
 	go func() {
 		for elem := range queueGet {
 			log.Info("Processing request: ", elem.Method(), " - url:", elem.Path())
-			countGet++
 		}
 	}()
 
 	app := fiber.New()
 
-	app.Post("/clientes/:id/transacoes", rest.PostWrapper(db, queuePost, start, finish))
-	app.Get("/clientes/:id/extrato", rest.GetWrapper(db, queueGet))
+	app.Post("/clientes/:id/transacoes", rest.PostWrapper(dbPool, start, finish))
+	app.Get("/clientes/:id/extrato", rest.GetWrapper(dbPool, queueGet))
 
 	app.Listen(":8081")
 }

@@ -1,11 +1,14 @@
 package repository
 
-import "time"
+import (
+	"errors"
+	"time"
+)
 
 type UserIdType uint8
 type TransactionIdType uint64
 type ValueType int32
-type OperationType string
+
 type RealizedInType *time.Time
 type DescriptionType string
 type CtxDbKey string
@@ -20,6 +23,26 @@ const (
 const (
 	DbKey CtxDbKey = CtxDbKey("DbConn")
 )
+
+const (
+	debit  = "d"
+	credit = "c"
+)
+
+type OperationType string
+
+func (op OperationType) IsValid() bool {
+	return op == debit || op == credit
+}
+
+func ParseOperationType(value string) (OperationType, error) {
+	switch value {
+	case debit, credit:
+		return OperationType(value), nil
+	default:
+		return "", errors.New("invalid value to OperationType")
+	}
+}
 
 func (order OrderBy) String() string {
 	orders := [...]string{"asc", "desc"}

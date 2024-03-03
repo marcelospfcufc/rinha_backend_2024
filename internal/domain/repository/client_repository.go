@@ -7,8 +7,32 @@ import (
 )
 
 type ClientRepository interface {
-	HasClientById(ctx context.Context, clientId entity.Id) bool
-	Create(client entity.Client) (entity.Client, error)
-	GetById(ctx context.Context, clientId entity.Id) (entity.Client, error)
-	GetTransactionsById(ctx context.Context, clientId entity.Id) ([]entity.Transaction, error)
+	Create(
+		ctx context.Context,
+		client entity.Client,
+	) (entity.Client, error)
+
+	AddTransaction(
+		ctx context.Context,
+		clientId entity.Id,
+		transaction entity.Transaction,
+		calculateNewBalance func(
+			clientCredit int64,
+			currentBalance int64,
+			transactionValue int64,
+			transactionOperation string,
+		) (clientNewCurrentBalance int64, err error),
+	) (clientCredit int64, clientNewCurrentBalance int64, err error)
+
+	GetTransactions(
+		ctx context.Context,
+		clientId entity.Id,
+		limit int,
+		orderBy OrderBy,
+	) ([]entity.Transaction, error)
+
+	GetClientById(
+		ctx context.Context,
+		clientId entity.Id,
+	) (entity.Client, error)
 }

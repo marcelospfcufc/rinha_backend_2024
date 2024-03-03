@@ -27,14 +27,14 @@ type GetTransactionStatementOutputData struct {
 }
 
 type GetTransactionStatementService struct {
-	repo repository.Repository
+	repo repository.ClientRepository
 }
 
 func NewGetTransactionStatementService(
-	repo *repository.Repository,
+	repo repository.ClientRepository,
 ) *GetTransactionStatementService {
 	service := GetTransactionStatementService{
-		repo: *repo,
+		repo: repo,
 	}
 
 	return &service
@@ -47,7 +47,7 @@ func (service *GetTransactionStatementService) Execute(
 
 	var outputData GetTransactionStatementOutputData = GetTransactionStatementOutputData{}
 
-	client, err := service.repo.GetSimplifiedClientById(ctx, inputData.ClientId)
+	client, err := service.repo.GetClientById(ctx, inputData.ClientId)
 	if err != nil {
 		return outputData, domain.ErrClientNotFound
 	}

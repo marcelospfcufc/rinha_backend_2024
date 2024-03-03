@@ -8,7 +8,7 @@ import (
 
 type UnitOfWork interface {
 	Begin(ctx context.Context) error
-	Commit() error
-	RollBack() error
-	GetRepository() *repository.Repository
+	Commit(ctx context.Context) error
+	RollBack(ctx context.Context) error
+	GetRepository() repository.ClientRepository
 }

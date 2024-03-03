@@ -1,23 +1,26 @@
 package pgdatabase
 
 import (
-	"database/sql"
+	"context"
+
+	"github.com/gofiber/fiber/v2/log"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func CreateDatabase(db *sql.DB) error {
-	rows, err := db.Query(
-		`
-		DROP TABLE IF EXISTS Transactions;
-		
-		DROP TABLE IF EXISTS Clients;    
+func CreateDatabase(ctx context.Context, dbPool *pgxpool.Pool) error {
 
+	statements := []string{
+		"DROP TABLE IF EXISTS Transactions;",
+		"DROP TABLE IF EXISTS Clients;",
+		`
 		CREATE TABLE Clients (
 			id BIGSERIAL PRIMARY KEY,
 			name VARCHAR(255),
 			credit INTEGER,
 			balance INTEGER DEFAULT 0
 		);
-
+		`,
+		`
 		CREATE TABLE Transactions (
 			id BIGSERIAL PRIMARY KEY,
 			value INTEGER,
@@ -27,7 +30,8 @@ func CreateDatabase(db *sql.DB) error {
 			created_at TIMESTAMP NOT NULL DEFAULT NOW(),
 			FOREIGN KEY (client_id) REFERENCES Clients(id)
 		);
-		
+		`,
+		`
 		INSERT INTO Clients (id, name, credit)
 		VALUES
 			(1,'o barato sai caro', 1000 * 100),
@@ -36,13 +40,16 @@ func CreateDatabase(db *sql.DB) error {
 			(4,'padaria joia de cocaia', 100000 * 100),
 			(5,'kid mais', 5000 * 100);
 		`,
-	)
-
-	if err != nil {
-		return err
 	}
 
-	defer rows.Close()
+	for _, statement := range statements {
+		_, err := dbPool.Exec(context.Background(), statement)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	log.Info("Tables created and data inserted successfully")
 
 	return nil
 }

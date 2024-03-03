@@ -2,46 +2,54 @@ package pgdatabase
 
 import (
 	"context"
-	"database/sql"
 	"log"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/marcelospfcufc/rinha_backend_2024/internal/domain/repository"
 )
 
 type PgUnitOfWork struct {
-	db          *sql.DB
-	transaction *sql.Tx
+	db   *pgxpool.Pool
+	dbTx pgx.Tx
 }
 
 func NewPgUnitOfWork(
-	db *sql.DB,
+	db *pgxpool.Pool,
 ) (*PgUnitOfWork, error) {
 
 	return &PgUnitOfWork{
-		db:          db,
-		transaction: nil,
+		db:   db,
+		dbTx: nil,
 	}, nil
 }
 
 func (unit *PgUnitOfWork) Begin(ctx context.Context) error {
-	tx, err := unit.db.BeginTx(ctx, nil)
+
+	tx, err := unit.db.BeginTx(ctx, pgx.TxOptions{
+		IsoLevel:   pgx.ReadCommitted,
+		AccessMode: pgx.ReadWrite,
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
-	unit.transaction = tx
+	unit.dbTx = tx
+
+	//fmt.Printf("Endereço de memória de (Begin) tx: %p -- %p\n", &unit.transaction, unit.transaction)
 
 	return err
 }
 
-func (unit *PgUnitOfWork) Commit() error {
-	return unit.transaction.Commit()
+func (unit *PgUnitOfWork) Commit(ctx context.Context) error {
+	return unit.dbTx.Commit(ctx)
 }
 
-func (unit *PgUnitOfWork) RollBack() error {
-	return unit.transaction.Rollback()
+func (unit *PgUnitOfWork) RollBack(ctx context.Context) error {
+	return unit.dbTx.Rollback(ctx)
 }
 
-func (unit *PgUnitOfWork) GetRepository() *repository.Repository {
-	repo := repository.Repository(NewPgRepository(unit.db, unit.transaction))
-	return &repo
+func (unit *PgUnitOfWork) GetRepository() repository.ClientRepository {
+	//fmt.Printf("Endereço de memória de (GetRepository) tx: %p -- %p\n", &unit.transaction, unit.transaction)
+	repo := NewPgRepository(unit.db, unit.dbTx)
+	return repo
 }

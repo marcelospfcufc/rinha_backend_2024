@@ -2,12 +2,12 @@ package rest
 
 import (
 	"context"
-	"database/sql"
 	"strconv"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/marcelospfcufc/rinha_backend_2024/internal/controller"
 	"github.com/marcelospfcufc/rinha_backend_2024/internal/domain"
 	"github.com/marcelospfcufc/rinha_backend_2024/internal/domain/entity"
@@ -28,16 +28,13 @@ func NewTransactionRoute(app *fiber.App, db *gorm.DB) *TransactionRoute {
 	}
 }
 
-func PostWrapper(db *sql.DB, queue chan *fiber.Ctx, start <-chan string, finish chan<- string) fiber.Handler {
+func PostWrapper(db *pgxpool.Pool, start chan<- string, finish chan<- string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-
-		queue <- c
-		count := <-start
-		log.Info(count)
 		var err error
+		start <- c.Path()
 
 		defer func() {
-			finish <- "Finalizando"
+			finish <- c.Path()
 		}()
 
 		ctx, cancel := context.WithTimeout(c.Context(), time.Second*40)
@@ -48,21 +45,9 @@ func PostWrapper(db *sql.DB, queue chan *fiber.Ctx, start <-chan string, finish 
 			return err
 		}
 
-		err = unitOfWork.Begin(ctx)
-		if err != nil {
-			return err
-		}
-
-		defer func() {
-			if err != nil {
-				err = unitOfWork.RollBack()
-			} else {
-				err = unitOfWork.Commit()
-			}
-		}()
-
-		serviceAddTransaction := service.NewAddTransactionService(unitOfWork.GetRepository())
-		ctrl := controller.NewAddTransactionController(unitOfWork, serviceAddTransaction)
+		ctrl := controller.NewAddTransactionController(
+			unitOfWork,
+		)
 
 		id, err := strconv.Atoi(c.Params("id"))
 		if err != nil {
@@ -116,7 +101,7 @@ func PostWrapper(db *sql.DB, queue chan *fiber.Ctx, start <-chan string, finish 
 	}
 }
 
-func GetWrapper(db *sql.DB, queue chan *fiber.Ctx) fiber.Handler {
+func GetWrapper(db *pgxpool.Pool, queue chan *fiber.Ctx) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
 		queue <- c
