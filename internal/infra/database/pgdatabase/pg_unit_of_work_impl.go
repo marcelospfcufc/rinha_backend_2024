@@ -2,16 +2,16 @@ package pgdatabase
 
 import (
 	"context"
-	"log"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/marcelospfcufc/rinha_backend_2024/internal/domain"
 	"github.com/marcelospfcufc/rinha_backend_2024/internal/domain/repository"
 )
 
 type PgUnitOfWork struct {
 	db   *pgxpool.Pool
-	dbTx *pgx.Tx //pointer to pointer
+	dbTx *pgx.Tx
 }
 
 func NewPgUnitOfWork(
@@ -31,7 +31,7 @@ func (unit *PgUnitOfWork) Begin(ctx context.Context) error {
 		AccessMode: pgx.ReadWrite,
 	})
 	if err != nil {
-		log.Fatal(err)
+		return domain.ErrInternalDatabaseError
 	}
 	unit.dbTx = &tx
 	return err

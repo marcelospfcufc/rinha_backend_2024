@@ -1,25 +1,20 @@
 version: "3.8"
 
 services:
-  api01: &api
-    # Lembre-se de que seu serviço HTTP deve estar hospedado num repositório
-    # publicamente acessível! Ex.: hub.docker.com
+  api01: &api    
     image: marcelospfcufc/rinha-backend-2024:v1
     hostname: api01
     environment:
-      - DB_URI=postgres://postgres:qpalzm@172.24.0.4/rinha_db?sslmode=disable&timezone=UTC
+      - DB_URI=postgres://postgres:qpalzm@db_postgres/rinha_db?sslmode=disable&timezone=UTC
     restart: always
     tty: true
-    command: ["/api2/main"]    
-    # Não é necessário expor qualquer porta além da porta do load balancer,
-    # mas é comum as pessoas o fazerem para testarem suas APIs e conectarem
-    # ao banco de dados na fase de desenvolvimento.
+    command: ["/api2/main"]        
     ports:
       - "8081:8080"
     depends_on:
       - db_postgres
     volumes:
-      - .:/api2
+      - ./main:/api2/main
     deploy:
       resources:
         limits:
@@ -69,12 +64,6 @@ services:
           cpus: "0.4"
           memory: "340MB"
 
-# O uso do modo `bridge` deve ser adequado à carga que será usada no teste.
-# A edição anterior se beneficiou do modo host pois o volume de requisições
-# era relativamente alto e a virtualização da rede se tornou um gargalo, mas
-# este modo é mais complexo de ser configurado. Fique à vontade para usar o
-# modo que quiser desde que não conflite com portas trivialmente usadas em um
-# SO.
 networks:
   default:
     driver: bridge
