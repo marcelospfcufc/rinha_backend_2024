@@ -47,6 +47,7 @@ func PostWrapper(db *pgxpool.Pool, start chan<- string, finish chan<- string) fi
 
 		ctrl := controller.NewAddTransactionController(
 			unitOfWork,
+			service.NewAddTransactionService(unitOfWork.GetRepository()),
 		)
 
 		id, err := strconv.Atoi(c.Params("id"))
@@ -101,25 +102,26 @@ func PostWrapper(db *pgxpool.Pool, start chan<- string, finish chan<- string) fi
 	}
 }
 
-func GetWrapper(db *pgxpool.Pool, queue chan *fiber.Ctx) fiber.Handler {
+func GetWrapper(db *pgxpool.Pool, start chan<- string, finish chan<- string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
-		queue <- c
-
 		var err error
+		start <- c.Path()
+
+		defer func() {
+			finish <- c.Path()
+		}()
 
 		unitOfWork, err := pgdatabase.NewPgUnitOfWork(db)
 		if err != nil {
 			return err
 		}
 
-		getTransactionStatementService := service.NewGetTransactionStatementService(
-			unitOfWork.GetRepository(),
-		)
-
 		ctrl := controller.NewGetBankStatementController(
 			unitOfWork,
-			*getTransactionStatementService,
+			service.NewGetTransactionStatementService(
+				unitOfWork.GetRepository(),
+			),
 		)
 
 		id, err := strconv.Atoi(c.Params("id"))

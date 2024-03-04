@@ -11,7 +11,7 @@ import (
 
 type PgUnitOfWork struct {
 	db   *pgxpool.Pool
-	dbTx pgx.Tx
+	dbTx *pgx.Tx //pointer to pointer
 }
 
 func NewPgUnitOfWork(
@@ -33,23 +33,19 @@ func (unit *PgUnitOfWork) Begin(ctx context.Context) error {
 	if err != nil {
 		log.Fatal(err)
 	}
-	unit.dbTx = tx
-
-	//fmt.Printf("Endereço de memória de (Begin) tx: %p -- %p\n", &unit.transaction, unit.transaction)
-
+	unit.dbTx = &tx
 	return err
 }
 
 func (unit *PgUnitOfWork) Commit(ctx context.Context) error {
-	return unit.dbTx.Commit(ctx)
+	return (*unit.dbTx).Commit(ctx)
 }
 
 func (unit *PgUnitOfWork) RollBack(ctx context.Context) error {
-	return unit.dbTx.Rollback(ctx)
+	return (*unit.dbTx).Rollback(ctx)
 }
 
 func (unit *PgUnitOfWork) GetRepository() repository.ClientRepository {
-	//fmt.Printf("Endereço de memória de (GetRepository) tx: %p -- %p\n", &unit.transaction, unit.transaction)
 	repo := NewPgRepository(unit.db, unit.dbTx)
 	return repo
 }

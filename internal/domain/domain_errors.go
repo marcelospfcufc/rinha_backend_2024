@@ -25,6 +25,7 @@ func (dError DomainError) Error() string {
 }
 
 var (
-	ErrClientNotFound       = NewDomainError("client_not_found", "client not found")
-	ErrClientWithoutBalance = NewDomainError("client_without_balance", "client without balance")
+	ErrClientNotFound        = NewDomainError("client_not_found", "client not found")
+	ErrClientWithoutBalance  = NewDomainError("client_without_balance", "client without balance")
+	ErrInternalDatabaseError = NewDomainError("internal_database_error", "internal database error")
 )

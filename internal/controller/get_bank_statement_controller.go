@@ -25,13 +25,6 @@ type TransactionData struct {
 	CreatedAt   string `json:"realizada_em"`
 }
 
-/*
-	"saldo": {
-	    "total": -9098,
-	    "data_extrato": "2024-01-17T02:34:41.217753Z",
-	    "limite": 100000
-	  },
-*/
 type ClientBalanceData struct {
 	Balance     int64  `json:"total"`
 	RequestDate string `json:"data_extrato"`
@@ -40,12 +33,12 @@ type ClientBalanceData struct {
 
 type GetBankStatementController struct {
 	UnitOfWork                     interfaces.UnitOfWork
-	getTransactionStatementService service.GetTransactionStatementService
+	getTransactionStatementService *service.GetTransactionStatementService
 }
 
 func NewGetBankStatementController(
 	unitOfWork interfaces.UnitOfWork,
-	service service.GetTransactionStatementService,
+	service *service.GetTransactionStatementService,
 ) *GetBankStatementController {
 	controller := GetBankStatementController{
 		getTransactionStatementService: service,

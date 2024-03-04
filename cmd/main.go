@@ -8,7 +8,6 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
-	"github.com/marcelospfcufc/rinha_backend_2024/internal/infra/database/pgdatabase"
 	"github.com/marcelospfcufc/rinha_backend_2024/internal/infra/rest"
 )
 
@@ -25,25 +24,23 @@ func main() {
 	}
 
 	defer dbPool.Close()
-	dbPool.Config().MaxConns = 4
+	dbPool.Config().MaxConns = 100
 
-	err = pgdatabase.CreateDatabase(context.Background(), dbPool)
-	if err != nil {
+	startPost := make(chan string, 10)
+	finishPost := make(chan string, 10)
 
-		log.Fatal(err)
-	}
+	startGet := make(chan string, 50)
+	finishGet := make(chan string, 50)
 
-	start := make(chan string, 10)
-	finish := make(chan string, 10)
-
-	processCtx := func(ctxs <-chan string) {
+	processCtx := func(ctxs <-chan string, finishes <-chan string) {
 		for ctx := range ctxs {
 			log.Info("Processing: ", ctx)
-			log.Info("Finish: ", <-finish)
+			log.Info("Finish: ", <-finishes)
 		}
 	}
 
-	go processCtx(start)
+	go processCtx(startPost, finishPost)
+	go processCtx(startGet, finishGet)
 
 	queueGet := make(chan *fiber.Ctx, 20)
 	go func() {
@@ -54,8 +51,8 @@ func main() {
 
 	app := fiber.New()
 
-	app.Post("/clientes/:id/transacoes", rest.PostWrapper(dbPool, start, finish))
-	app.Get("/clientes/:id/extrato", rest.GetWrapper(dbPool, queueGet))
+	app.Post("/clientes/:id/transacoes", rest.PostWrapper(dbPool, startPost, finishPost))
+	app.Get("/clientes/:id/extrato", rest.GetWrapper(dbPool, startGet, finishGet))
 
-	app.Listen(":8081")
+	app.Listen(":9999")
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -16,13 +15,12 @@ import (
 
 type PgRepository struct {
 	conn *pgxpool.Pool
-	tx   pgx.Tx
+	tx   *pgx.Tx
 }
 
 func NewPgRepository(
 	dbConnection *pgxpool.Pool,
-	tx pgx.Tx,
-
+	tx *pgx.Tx,
 ) *PgRepository {
 	return &PgRepository{
 		conn: dbConnection,
@@ -53,7 +51,7 @@ func (pg *PgRepository) AddTransaction(
 	var row pgx.Row
 
 	if pg.tx == nil {
-		log.Fatal("dbTx is nil in AddTransacion")
+		return -1, -1, domain.ErrInternalDatabaseError
 	}
 
 	queryToExecute := fmt.Sprintf(
@@ -67,7 +65,7 @@ func (pg *PgRepository) AddTransaction(
 		clientId,
 	)
 
-	row = pg.tx.QueryRow(ctx, queryToExecute)
+	row = (*pg.tx).QueryRow(ctx, queryToExecute)
 
 	err = row.Scan(
 		&dbClient.Id,
@@ -101,7 +99,7 @@ func (pg *PgRepository) AddTransaction(
 		clientId,
 	)
 
-	_, err = pg.tx.Exec(ctx, queryToExecute)
+	_, err = (*pg.tx).Exec(ctx, queryToExecute)
 
 	if err != nil {
 		return -1, -1, err
@@ -118,7 +116,7 @@ func (pg *PgRepository) AddTransaction(
 		clientId,
 	)
 
-	_, err = pg.tx.Exec(ctx, queryToExecute)
+	_, err = (*pg.tx).Exec(ctx, queryToExecute)
 
 	if err != nil {
 		return -1, -1, err
@@ -159,7 +157,7 @@ func (pg *PgRepository) GetTransactions(
 	var err error
 
 	if pg.tx != nil {
-		rows, err = pg.tx.Query(ctx, queryToExecute)
+		rows, err = (*pg.tx).Query(ctx, queryToExecute)
 	} else {
 		rows, err = pg.conn.Query(ctx, queryToExecute)
 	}
@@ -221,7 +219,7 @@ func (pg *PgRepository) GetClientById(
 	var err error
 
 	if pg.tx != nil {
-		row = pg.tx.QueryRow(ctx, queryToExecute)
+		row = (*pg.tx).QueryRow(ctx, queryToExecute)
 	} else {
 		row = pg.conn.QueryRow(ctx, queryToExecute)
 	}
