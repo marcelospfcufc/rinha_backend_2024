@@ -8,25 +8,12 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/marcelospfcufc/rinha_backend_2024/internal/controller"
+	addtransactionctrl "github.com/marcelospfcufc/rinha_backend_2024/internal/controller/add_transaction"
+	bankstatementctrl "github.com/marcelospfcufc/rinha_backend_2024/internal/controller/get_bank_statement"
 	"github.com/marcelospfcufc/rinha_backend_2024/internal/domain"
 	"github.com/marcelospfcufc/rinha_backend_2024/internal/domain/entity"
 	"github.com/marcelospfcufc/rinha_backend_2024/internal/infra/database/pgdatabase"
-	"github.com/marcelospfcufc/rinha_backend_2024/internal/service"
-	"gorm.io/gorm"
 )
-
-type TransactionRoute struct {
-	app *fiber.App
-	db  *gorm.DB
-}
-
-func NewTransactionRoute(app *fiber.App, db *gorm.DB) *TransactionRoute {
-	return &TransactionRoute{
-		app: app,
-		db:  db,
-	}
-}
 
 func PostWrapper(db *pgxpool.Pool, start chan<- string, finish chan<- string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
@@ -45,9 +32,8 @@ func PostWrapper(db *pgxpool.Pool, start chan<- string, finish chan<- string) fi
 			return err
 		}
 
-		ctrl := controller.NewAddTransactionController(
+		ctrl := addtransactionctrl.NewAddTransactionController(
 			unitOfWork,
-			service.NewAddTransactionService(unitOfWork.GetRepository()),
 		)
 
 		id, err := strconv.Atoi(c.Params("id"))
@@ -56,7 +42,7 @@ func PostWrapper(db *pgxpool.Pool, start chan<- string, finish chan<- string) fi
 			return c.SendStatus(fiber.StatusBadRequest)
 		}
 
-		var body controller.AddTransactionInputDto
+		var body addtransactionctrl.InputDto
 		err = c.BodyParser(&body)
 		if err != nil {
 			log.Info("Failed to parse body", err)
@@ -78,13 +64,15 @@ func PostWrapper(db *pgxpool.Pool, start chan<- string, finish chan<- string) fi
 			return c.SendStatus(fiber.StatusUnprocessableEntity)
 		}
 
-		var outputController controller.AddTransactionOutputDto
+		var outputController addtransactionctrl.OutputDto
 
 		outputController, err = ctrl.AddTransaction(
 			ctx,
-			controller.AddTransactionInputData{
-				AddTransactionInputDto: body,
-				ClientId:               entity.Id(id),
+			addtransactionctrl.InputDto{
+				Value:       body.Value,
+				Operation:   body.Operation,
+				Description: body.Description,
+				ClientId:    entity.Id(id),
 			},
 		)
 
@@ -117,11 +105,8 @@ func GetWrapper(db *pgxpool.Pool, start chan<- string, finish chan<- string) fib
 			return err
 		}
 
-		ctrl := controller.NewGetBankStatementController(
+		ctrl := bankstatementctrl.NewGetBankStatementController(
 			unitOfWork,
-			service.NewGetTransactionStatementService(
-				unitOfWork.GetRepository(),
-			),
 		)
 
 		id, err := strconv.Atoi(c.Params("id"))
@@ -130,7 +115,7 @@ func GetWrapper(db *pgxpool.Pool, start chan<- string, finish chan<- string) fib
 			return c.SendStatus(fiber.StatusBadRequest)
 		}
 
-		outputController, err := ctrl.GetBankStatement(controller.GetBankStatementInputDto{
+		outputController, err := ctrl.GetBankStatement(bankstatementctrl.InputDto{
 			ClientId: entity.Id(id),
 		})
 

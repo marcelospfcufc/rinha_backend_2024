@@ -1,19 +1,20 @@
-package controller
+package bankstatementctrl
 
 import (
 	"context"
 	"time"
 
+	"github.com/marcelospfcufc/rinha_backend_2024/internal/domain"
 	"github.com/marcelospfcufc/rinha_backend_2024/internal/domain/entity"
 	"github.com/marcelospfcufc/rinha_backend_2024/internal/domain/interfaces"
-	"github.com/marcelospfcufc/rinha_backend_2024/internal/service"
+	"github.com/marcelospfcufc/rinha_backend_2024/internal/domain/repository"
 )
 
-type GetBankStatementInputDto struct {
+type InputDto struct {
 	ClientId entity.Id
 }
 
-type GetBankStatementOutputDto struct {
+type OutputDto struct {
 	Balance          ClientBalanceData `json:"saldo"`
 	LastTransactions []TransactionData `json:"ultimas_transacoes"`
 }
@@ -32,23 +33,26 @@ type ClientBalanceData struct {
 }
 
 type GetBankStatementController struct {
-	UnitOfWork                     interfaces.UnitOfWork
-	getTransactionStatementService *service.GetTransactionStatementService
+	unitOfWork interfaces.UnitOfWork
 }
 
 func NewGetBankStatementController(
 	unitOfWork interfaces.UnitOfWork,
-	service *service.GetTransactionStatementService,
 ) *GetBankStatementController {
 	controller := GetBankStatementController{
-		getTransactionStatementService: service,
+		unitOfWork: unitOfWork,
 	}
 
 	return &controller
 }
 
-func (controller *GetBankStatementController) GetBankStatement(input GetBankStatementInputDto) (GetBankStatementOutputDto, error) {
-	var transactionStatementOutputDto GetBankStatementOutputDto
+func (ctrl *GetBankStatementController) GetBankStatement(
+	input InputDto,
+) (
+	OutputDto,
+	error,
+) {
+	var transactionStatementOutputDto OutputDto
 
 	ctx, cancel := context.WithTimeout(
 		context.Background(),
@@ -57,11 +61,22 @@ func (controller *GetBankStatementController) GetBankStatement(input GetBankStat
 
 	defer cancel()
 
-	serviceOutput, err := controller.getTransactionStatementService.Execute(
+	clientRepository := ctrl.unitOfWork.GetClientRepository()
+
+	client, err := clientRepository.GetClientById(
 		ctx,
-		service.GetTransactionStatementInputData{
-			ClientId: input.ClientId,
-		},
+		input.ClientId,
+	)
+
+	if err != nil {
+		return transactionStatementOutputDto, domain.ErrClientNotFound
+	}
+
+	lastTentransactions, err := clientRepository.GetTransactions(
+		ctx,
+		input.ClientId,
+		10,
+		repository.Desc,
 	)
 
 	if err != nil {
@@ -70,10 +85,10 @@ func (controller *GetBankStatementController) GetBankStatement(input GetBankStat
 
 	lastTransactionToReturn := make(
 		[]TransactionData,
-		len(serviceOutput.Transactions),
+		len(lastTentransactions),
 	)
 
-	for idx, transaction := range serviceOutput.Transactions {
+	for idx, transaction := range lastTentransactions {
 		lastTransactionToReturn[idx] = TransactionData{
 			Value:       transaction.Value,
 			Operation:   transaction.Operation,
@@ -83,12 +98,11 @@ func (controller *GetBankStatementController) GetBankStatement(input GetBankStat
 	}
 
 	transactionStatementOutputDto.Balance = ClientBalanceData{
-		Credit:      serviceOutput.Credit,
-		Balance:     serviceOutput.Balance,
+		Credit:      client.Credit,
+		Balance:     client.CurrentBalance,
 		RequestDate: time.Now().UTC().Format("2006-01-02T15:04:05.999999Z"),
 	}
 
 	transactionStatementOutputDto.LastTransactions = lastTransactionToReturn
-
 	return transactionStatementOutputDto, err
 }

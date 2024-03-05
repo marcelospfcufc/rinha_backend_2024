@@ -2,6 +2,7 @@ package pgdatabase
 
 import (
 	"context"
+	"errors"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -34,18 +35,25 @@ func (unit *PgUnitOfWork) Begin(ctx context.Context) error {
 		return domain.ErrInternalDatabaseError
 	}
 	unit.dbTx = &tx
+
 	return err
 }
 
 func (unit *PgUnitOfWork) Commit(ctx context.Context) error {
+	if unit.dbTx == nil {
+		return errors.New("no active transaction")
+	}
 	return (*unit.dbTx).Commit(ctx)
 }
 
 func (unit *PgUnitOfWork) RollBack(ctx context.Context) error {
+	if unit.dbTx == nil {
+		return errors.New("no active transaction")
+	}
 	return (*unit.dbTx).Rollback(ctx)
 }
 
-func (unit *PgUnitOfWork) GetRepository() repository.ClientRepository {
+func (unit *PgUnitOfWork) GetClientRepository() repository.ClientRepository {
 	repo := NewPgRepository(unit.db, unit.dbTx)
 	return repo
 }

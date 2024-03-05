@@ -1,16 +1,6 @@
-package entity
+package domain
 
-import "github.com/marcelospfcufc/rinha_backend_2024/internal/domain"
-
-type Client struct {
-	Id
-	Name           string
-	Credit         int64
-	CurrentBalance int64
-	Transactions   []Transaction
-}
-
-func (cli Client) calculateNewBalance(
+func CalculateNewBalance(
 	clientCredit int64,
 	currentBalance int64,
 	transactionValue int64,
@@ -21,7 +11,7 @@ func (cli Client) calculateNewBalance(
 		newBalanceValue -= transactionValue
 
 		if newBalanceValue < clientCredit*-1 {
-			return -1, domain.ErrClientWithoutBalance
+			return -1, ErrClientWithoutBalance
 		}
 	} else {
 		newBalanceValue += transactionValue

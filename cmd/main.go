@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"os"
 	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -17,8 +16,8 @@ type HandlerFunc func(c *fiber.Ctx) error
 
 func main() {
 
-	//connStr := "postgres://postgres:qpalzm@db_postgres/rinha_db?sslmode=disable&timezone=UTC"
-	connStr := os.Getenv("DB_URI")
+	connStr := "postgres://postgres:qpalzm@172.29.0.2/rinha_db?sslmode=disable&timezone=UTC"
+	//connStr := os.Getenv("DB_URI")
 
 	if strings.TrimSpace(connStr) == "" {
 		log.Fatal("not found environment variable 'DB_URI'")
@@ -49,17 +48,10 @@ func main() {
 	go processCtx(startPost, finishPost)
 	go processCtx(startGet, finishGet)
 
-	queueGet := make(chan *fiber.Ctx, 20)
-	go func() {
-		for elem := range queueGet {
-			log.Info("Processing request: ", elem.Method(), " - url:", elem.Path())
-		}
-	}()
-
 	app := fiber.New()
 
 	app.Post("/clientes/:id/transacoes", rest.PostWrapper(dbPool, startPost, finishPost))
 	app.Get("/clientes/:id/extrato", rest.GetWrapper(dbPool, startGet, finishGet))
 
-	app.Listen(":9999")
+	app.Listen(":8080")
 }

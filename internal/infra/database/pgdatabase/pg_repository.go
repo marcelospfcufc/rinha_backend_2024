@@ -15,7 +15,7 @@ import (
 
 type PgRepository struct {
 	conn *pgxpool.Pool
-	tx   *pgx.Tx
+	Tx   *pgx.Tx
 }
 
 func NewPgRepository(
@@ -24,7 +24,7 @@ func NewPgRepository(
 ) *PgRepository {
 	return &PgRepository{
 		conn: dbConnection,
-		tx:   tx,
+		Tx:   tx,
 	}
 }
 
@@ -50,7 +50,7 @@ func (pg *PgRepository) AddTransaction(
 	var dbClient entity.Client
 	var row pgx.Row
 
-	if pg.tx == nil {
+	if *pg.Tx == nil {
 		return -1, -1, domain.ErrInternalDatabaseError
 	}
 
@@ -65,7 +65,7 @@ func (pg *PgRepository) AddTransaction(
 		clientId,
 	)
 
-	row = (*pg.tx).QueryRow(ctx, queryToExecute)
+	row = (*pg.Tx).QueryRow(ctx, queryToExecute)
 
 	err = row.Scan(
 		&dbClient.Id,
@@ -99,7 +99,7 @@ func (pg *PgRepository) AddTransaction(
 		clientId,
 	)
 
-	_, err = (*pg.tx).Exec(ctx, queryToExecute)
+	_, err = (*pg.Tx).Exec(ctx, queryToExecute)
 
 	if err != nil {
 		return -1, -1, err
@@ -116,7 +116,7 @@ func (pg *PgRepository) AddTransaction(
 		clientId,
 	)
 
-	_, err = (*pg.tx).Exec(ctx, queryToExecute)
+	_, err = (*pg.Tx).Exec(ctx, queryToExecute)
 
 	if err != nil {
 		return -1, -1, err
@@ -156,8 +156,8 @@ func (pg *PgRepository) GetTransactions(
 	var rows pgx.Rows
 	var err error
 
-	if pg.tx != nil {
-		rows, err = (*pg.tx).Query(ctx, queryToExecute)
+	if pg.Tx != nil {
+		rows, err = (*pg.Tx).Query(ctx, queryToExecute)
 	} else {
 		rows, err = pg.conn.Query(ctx, queryToExecute)
 	}
@@ -218,8 +218,8 @@ func (pg *PgRepository) GetClientById(
 	var row pgx.Row
 	var err error
 
-	if pg.tx != nil {
-		row = (*pg.tx).QueryRow(ctx, queryToExecute)
+	if pg.Tx != nil {
+		row = (*pg.Tx).QueryRow(ctx, queryToExecute)
 	} else {
 		row = pg.conn.QueryRow(ctx, queryToExecute)
 	}
