@@ -19,8 +19,7 @@ services:
           cpus: "0.5"
           memory: "100MB"
 
-  api02:
-  #  # Essa sintaxe reusa o que foi declarado em 'api01'.
+  api02:  
     <<: *api 
     hostname: api02
     environment:

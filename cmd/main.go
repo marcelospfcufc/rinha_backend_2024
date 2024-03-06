@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"os"
 	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -15,10 +16,7 @@ import (
 type HandlerFunc func(c *fiber.Ctx) error
 
 func main() {
-
-	connStr := "postgres://postgres:qpalzm@172.29.0.2/rinha_db?sslmode=disable&timezone=UTC"
-	//connStr := os.Getenv("DB_URI")
-
+	connStr := os.Getenv("DB_URI")
 	if strings.TrimSpace(connStr) == "" {
 		log.Fatal("not found environment variable 'DB_URI'")
 	}
